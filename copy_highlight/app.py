@@ -304,7 +304,7 @@ class RegionSelector:
         overlay = tk.Toplevel(root)
         overlay.overrideredirect(True)
         overlay.attributes("-topmost", True)
-        overlay.attributes("-alpha", 0.18)
+        overlay.attributes("-alpha", float(os.environ.get("COPY_HIGHLIGHT_OVERLAY_ALPHA", "0.30")))
         overlay.configure(bg="black")
         overlay.geometry(f"{vw}x{vh}+{vx}+{vy}")
 
@@ -314,6 +314,14 @@ class RegionSelector:
         start_x = 0
         start_y = 0
         rect_id = None
+        hint_id = canvas.create_text(
+            16,
+            14,
+            anchor="nw",
+            fill="white",
+            text="Drag to select text • Release to copy • Esc to cancel",
+            font=("Segoe UI", 11),
+        )
 
         def cancel(_: object | None = None) -> None:
             self._result = None
@@ -330,15 +338,18 @@ class RegionSelector:
                 start_y,
                 start_x,
                 start_y,
-                outline="#4EA1FF",
-                width=2,
-                fill="",
+                outline="#00E5FF",
+                width=3,
+                fill="#00E5FF",
+                stipple="gray25",
             )
+            canvas.tag_raise(hint_id)
 
         def on_move(event: tk.Event) -> None:  # type: ignore[no-untyped-def]
             if rect_id is None:
                 return
             canvas.coords(rect_id, start_x, start_y, int(event.x), int(event.y))
+            canvas.tag_raise(hint_id)
 
         def on_release(event: tk.Event) -> None:  # type: ignore[no-untyped-def]
             nonlocal rect_id
@@ -361,7 +372,6 @@ class RegionSelector:
         canvas.bind("<B1-Motion>", on_move)
         canvas.bind("<ButtonRelease-1>", on_release)
 
-        root.deiconify()
         root.mainloop()
         try:
             root.destroy()
