@@ -23,10 +23,18 @@ SM_YVIRTUALSCREEN = 77
 SM_CXVIRTUALSCREEN = 78
 SM_CYVIRTUALSCREEN = 79
 
+DEFAULT_APP_NAME = "ClipOCR"
 DEFAULT_HOTKEY = "<ctrl>+<alt>+h"
 DEFAULT_LANG = "eng"
 
 _LOG_DIR: Optional[Path] = None
+
+
+def _app_name() -> str:
+    return (
+        (os.environ.get("COPY_HIGHLIGHT_APP_NAME") or DEFAULT_APP_NAME).strip()
+        or DEFAULT_APP_NAME
+    )
 
 
 def _set_dpi_awareness() -> None:
@@ -261,10 +269,23 @@ def _copy_to_clipboard(text: str) -> None:
 
 
 def _create_tray_icon_image() -> Image.Image:
-    img = Image.new("RGBA", (64, 64), (25, 25, 28, 255))
+    size = 64
+    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    d.rounded_rectangle((6, 6, 58, 58), radius=10, outline=(80, 80, 90, 255), width=2)
-    d.text((16, 18), "CH", fill=(240, 240, 245, 255))
+
+    # High-contrast icon that remains recognizable at small tray sizes.
+    d.ellipse(
+        (4, 4, size - 4, size - 4),
+        fill=(20, 22, 26, 255),
+        outline=(0, 229, 255, 255),
+        width=3,
+    )
+
+    back = (18, 22, 42, 46)
+    front = (22, 16, 46, 40)
+    d.rounded_rectangle(back, radius=4, fill=(255, 255, 255, 200))
+    d.rounded_rectangle(front, radius=4, fill=(255, 255, 255, 255))
+    d.rectangle((26, 32, 42, 35), fill=(0, 229, 255, 255))
     return img
 
 
@@ -319,7 +340,7 @@ class RegionSelector:
             14,
             anchor="nw",
             fill="white",
-            text="Drag to select text • Release to copy • Esc to cancel",
+            text="Drag to select text - Release to copy - Esc to cancel",
             font=("Segoe UI", 11),
         )
 
@@ -426,10 +447,11 @@ class CopyHighlightApp:
             pystray.MenuItem(f"Capture ({_hotkey_human(self._hotkey)})", on_capture),
             pystray.MenuItem("Quit", on_quit),
         )
+        app_name = _app_name()
         self._tray_icon = pystray.Icon(
-            "Copy Highlight",
+            app_name,
             _create_tray_icon_image(),
-            "Copy Highlight",
+            app_name,
             menu,
         )
 
@@ -456,7 +478,7 @@ class CopyHighlightApp:
                 pass
         return 0
 
-    def _notify(self, message: str, title: str = "Copy Highlight") -> None:
+    def _notify(self, message: str, title: str | None = None) -> None:
         icon = self._tray_icon
         if not icon:
             return
@@ -464,7 +486,7 @@ class CopyHighlightApp:
         if not callable(notify):
             return
         try:
-            notify(message, title)
+            notify(message, title or _app_name())
         except Exception:
             pass
 

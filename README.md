@@ -1,4 +1,4 @@
-# Copy Highlight (Windows)
+# ClipOCR (Windows)
 
 A small background app: press a hotkey, **drag-highlight a screen region**, OCR the text, and **copy it to your clipboard**.
 
@@ -34,6 +34,20 @@ Tip: to run without a console window:
 pythonw -m copy_highlight
 ```
 
+## Build an EXE (optional)
+
+This creates a portable folder with `CopyHighlight.exe` (no Python needed on the target PC).
+
+```powershell
+.\build_exe.ps1
+```
+
+Output:
+
+- `dist\ClipOCR\ClipOCR.exe`
+
+Important: this is a **one-folder** build. Don’t move/copy only the `.exe`—keep the whole `ClipOCR` folder (it contains `_internal\python314.dll` and other files).
+
 ## Use
 
 1) Open the PDF/image on your screen.
@@ -60,3 +74,4 @@ pythonw -m copy_highlight
   - Enable debug images/logs:
     - `setx COPY_HIGHLIGHT_DEBUG 1`
     - The preprocessed image is saved to `%LOCALAPPDATA%\CopyHighlight\last_capture_preprocessed.png`
+- The EXE still requires **Tesseract OCR** installed (or `TESSERACT_CMD` set), because OCR is done by Tesseract.
