@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import queue
 import shutil
+import sys
 import threading
 import time
 from dataclasses import dataclass
@@ -96,6 +97,17 @@ def _find_tesseract_exe() -> Optional[str]:
     which = shutil.which("tesseract")
     if which:
         return which
+
+    # Bundled portable layout (for zero-install releases):
+    #   ClipOCR.exe
+    #   tesseract\tesseract.exe
+    try:
+        exe_dir = Path(sys.executable).resolve().parent
+        bundled = exe_dir / "tesseract" / "tesseract.exe"
+        if bundled.is_file():
+            return str(bundled)
+    except Exception:
+        pass
 
     candidates = [
         r"C:\Program Files\Tesseract-OCR\tesseract.exe",

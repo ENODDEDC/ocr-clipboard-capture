@@ -12,9 +12,11 @@ A small background app: press a hotkey, **drag-highlight a screen region**, OCR 
 
 0) Install **Python 3.10+**.
 
-1) Install **Tesseract OCR** (required).
+1) Install **Tesseract OCR** (required for OCR).
    - Default install path the app looks for:
      - `C:\Program Files\Tesseract-OCR\tesseract.exe`
+   - If installed somewhere else, set:
+     - `setx TESSERACT_CMD "C:\Path\To\tesseract.exe"`
 
 2) Install Python deps:
 
@@ -48,6 +50,22 @@ Output:
 
 Important: this is a **one-folder** build. Don’t move/copy only the `.exe`—keep the whole `ClipOCR` folder (it contains `_internal\python314.dll` and other files).
 
+## Make a “zero-install” release zip (bundles Tesseract)
+
+If you want users to run the app without installing Tesseract, you can bundle your local Tesseract into the release zip:
+
+```powershell
+.\package_release.ps1 -BundleTesseract
+```
+
+Output:
+
+- `ClipOCR-win64.zip`
+
+Users just extract the zip and run:
+
+- `ClipOCR\ClipOCR.exe`
+
 ## Use
 
 1) Open the PDF/image on your screen.
@@ -74,4 +92,4 @@ pythonw -m copy_highlight
   - Enable debug images/logs:
     - `setx COPY_HIGHLIGHT_DEBUG 1`
     - The preprocessed image is saved to `%LOCALAPPDATA%\CopyHighlight\last_capture_preprocessed.png`
-- The EXE still requires **Tesseract OCR** installed (or `TESSERACT_CMD` set), because OCR is done by Tesseract.
+- The EXE uses **Tesseract OCR** (either installed system-wide or bundled via `.\package_release.ps1 -BundleTesseract`).
