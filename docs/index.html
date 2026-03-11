@@ -1,0 +1,664 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="ClipOCR: Copy text from uncopyable PDFs and images. Press a hotkey, drag-select on-screen text, OCR, and auto-copy to clipboard."
+    />
+    <title>ClipOCR — Copy on-screen text instantly</title>
+    <style>
+      :root {
+        --bg: #0b0d12;
+        --panel: #101522;
+        --panel2: #0f141f;
+        --text: #e9eef7;
+        --muted: #a5b2c7;
+        --line: rgba(255, 255, 255, 0.08);
+        --cyan: #00e5ff;
+        --cyan2: rgba(0, 229, 255, 0.18);
+        --shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+        --radius: 18px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        color: var(--text);
+        font: 16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        background:
+          radial-gradient(1100px 700px at 20% -10%, rgba(0, 229, 255, 0.16), transparent 60%),
+          radial-gradient(900px 650px at 85% 10%, rgba(106, 97, 255, 0.18), transparent 60%),
+          radial-gradient(700px 650px at 50% 110%, rgba(0, 229, 255, 0.12), transparent 50%),
+          var(--bg);
+      }
+      a {
+        color: inherit;
+      }
+
+      .wrap {
+        width: min(1100px, calc(100% - 48px));
+        margin: 0 auto;
+      }
+
+      header {
+        padding: 28px 0 10px;
+      }
+      .top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        text-decoration: none;
+      }
+      .logo {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        border: 2px solid var(--cyan);
+        background: linear-gradient(180deg, rgba(0, 229, 255, 0.18), rgba(0, 0, 0, 0));
+        position: relative;
+        box-shadow: 0 12px 30px rgba(0, 229, 255, 0.12);
+      }
+      .logo::before,
+      .logo::after {
+        content: "";
+        position: absolute;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.92);
+      }
+      .logo::before {
+        width: 18px;
+        height: 12px;
+        left: 11px;
+        top: 13px;
+        opacity: 0.7;
+      }
+      .logo::after {
+        width: 18px;
+        height: 12px;
+        left: 14px;
+        top: 10px;
+      }
+      .brand b {
+        font-weight: 720;
+        letter-spacing: 0.2px;
+      }
+      nav {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      nav a {
+        text-decoration: none;
+        padding: 8px 10px;
+        border-radius: 10px;
+        border: 1px solid transparent;
+      }
+      nav a:hover {
+        border-color: var(--line);
+        background: rgba(255, 255, 255, 0.03);
+        color: var(--text);
+      }
+
+      .hero {
+        padding: 30px 0 52px;
+        display: grid;
+        grid-template-columns: 1.05fr 0.95fr;
+        gap: 26px;
+        align-items: center;
+      }
+      .kicker {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 7px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.03);
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--cyan);
+        box-shadow: 0 0 0 6px rgba(0, 229, 255, 0.12);
+      }
+      h1 {
+        margin: 14px 0 12px;
+        font-size: clamp(34px, 4.2vw, 52px);
+        line-height: 1.08;
+        letter-spacing: -0.8px;
+      }
+      p.lead {
+        margin: 0 0 18px;
+        color: var(--muted);
+        font-size: 18px;
+      }
+      .ctaRow {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-top: 18px;
+      }
+      .btn {
+        appearance: none;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.03);
+        color: var(--text);
+        padding: 11px 14px;
+        border-radius: 12px;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 650;
+      }
+      .btnPrimary {
+        border-color: rgba(0, 229, 255, 0.42);
+        background: linear-gradient(180deg, rgba(0, 229, 255, 0.22), rgba(0, 229, 255, 0.06));
+        box-shadow: 0 12px 30px rgba(0, 229, 255, 0.12);
+      }
+      .btn:hover {
+        transform: translateY(-1px);
+        border-color: rgba(255, 255, 255, 0.16);
+      }
+      .btn:active {
+        transform: translateY(0);
+      }
+      .kbd {
+        font: 12px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+        padding: 6px 8px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(0, 0, 0, 0.22);
+        color: rgba(233, 238, 247, 0.92);
+      }
+
+      .card {
+        border: 1px solid var(--line);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+      .demoTopbar {
+        background: rgba(0, 0, 0, 0.22);
+        border-bottom: 1px solid var(--line);
+        padding: 10px 12px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .dots {
+        display: inline-flex;
+        gap: 7px;
+        margin-right: 4px;
+      }
+      .dots i {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        background: rgba(255, 255, 255, 0.12);
+      }
+      .demoTitle {
+        color: rgba(233, 238, 247, 0.82);
+        font-size: 13px;
+      }
+      .demoArea {
+        position: relative;
+        height: 330px;
+        background: linear-gradient(180deg, var(--panel2), var(--panel));
+      }
+
+      /* "Video-like" animation */
+      .paper {
+        position: absolute;
+        inset: 26px 22px 64px 22px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.86));
+        border-radius: 14px;
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+        overflow: hidden;
+      }
+      .paper::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(900px 200px at 40% 10%, rgba(0, 0, 0, 0.06), transparent 60%),
+          repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.03), rgba(0, 0, 0, 0.03) 1px, transparent 1px, transparent 12px);
+        opacity: 0.45;
+        pointer-events: none;
+      }
+      .field {
+        position: absolute;
+        left: 26px;
+        right: 26px;
+        top: 72px;
+        border: 1px solid rgba(0, 0, 0, 0.25);
+        border-radius: 10px;
+        padding: 18px 16px;
+        background: rgba(255, 255, 255, 0.25);
+      }
+      .label {
+        font: 700 12px/1.1 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+        letter-spacing: 1.2px;
+        color: rgba(0, 0, 0, 0.65);
+      }
+      .value {
+        margin-top: 12px;
+        font: 800 17px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+        letter-spacing: 1.6px;
+        color: rgba(0, 0, 0, 0.9);
+      }
+      .overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.28);
+        opacity: 0;
+        transition: opacity 220ms ease;
+      }
+      .overlay.on {
+        opacity: 1;
+      }
+      .selectBox {
+        position: absolute;
+        border: 3px solid var(--cyan);
+        background: var(--cyan2);
+        border-radius: 10px;
+        opacity: 0;
+        transform: translate3d(0, 0, 0);
+      }
+      .selectBox.on {
+        opacity: 1;
+      }
+      .cursor {
+        position: absolute;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: rgba(233, 238, 247, 0.95);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+        transform: translate(-50%, -50%);
+        opacity: 0;
+      }
+      .cursor.on {
+        opacity: 1;
+      }
+      .toast {
+        position: absolute;
+        left: 18px;
+        bottom: 16px;
+        right: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 12px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(10px);
+      }
+      .toast b {
+        font-weight: 720;
+      }
+      .toast small {
+        color: var(--muted);
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(0, 229, 255, 0.22);
+        background: rgba(0, 229, 255, 0.08);
+        color: rgba(233, 238, 247, 0.92);
+        font-size: 13px;
+        white-space: nowrap;
+      }
+      .pill i {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--cyan);
+        display: inline-block;
+      }
+
+      .grid {
+        padding: 14px 0 64px;
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 14px;
+      }
+      .tile {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: rgba(255, 255, 255, 0.03);
+        padding: 16px;
+      }
+      .tile h3 {
+        margin: 0 0 6px;
+        font-size: 15px;
+        letter-spacing: -0.1px;
+      }
+      .tile p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .section {
+        padding: 18px 0 10px;
+      }
+      .section h2 {
+        margin: 0 0 10px;
+        font-size: 22px;
+        letter-spacing: -0.3px;
+      }
+      .steps {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+      .step {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: rgba(255, 255, 255, 0.03);
+        padding: 16px;
+      }
+      .num {
+        width: 28px;
+        height: 28px;
+        border-radius: 10px;
+        display: inline-grid;
+        place-items: center;
+        margin-right: 10px;
+        border: 1px solid rgba(0, 229, 255, 0.3);
+        background: rgba(0, 229, 255, 0.08);
+        font-weight: 750;
+        color: rgba(233, 238, 247, 0.92);
+      }
+      .step b {
+        font-weight: 720;
+      }
+      .step p {
+        margin: 10px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      footer {
+        padding: 34px 0 40px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .fine {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        border-top: 1px solid var(--line);
+        padding-top: 16px;
+      }
+
+      @media (max-width: 980px) {
+        .hero {
+          grid-template-columns: 1fr;
+        }
+        .demoArea {
+          height: 320px;
+        }
+        .grid {
+          grid-template-columns: 1fr;
+        }
+        .steps {
+          grid-template-columns: 1fr;
+        }
+        nav {
+          display: none;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .btn:hover {
+          transform: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="wrap top">
+        <a class="brand" href="#top">
+          <span class="logo" aria-hidden="true"></span>
+          <div>
+            <b>ClipOCR</b>
+            <div style="color: var(--muted); font-size: 12px">Screen OCR to clipboard</div>
+          </div>
+        </a>
+        <nav>
+          <a href="#how">How it works</a>
+          <a href="#download">Download</a>
+          <a href="#requirements">Requirements</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="wrap" id="top">
+      <section class="hero">
+        <div>
+          <span class="kicker"><span class="dot"></span> Copy text from “uncopyable” PDFs & images</span>
+          <h1>Highlight any on‑screen text. ClipOCR copies it instantly.</h1>
+          <p class="lead">
+            Press a hotkey, drag-select a region, OCR runs in the background, and the text is copied to your clipboard.
+            Perfect for scanned forms, images, and PDFs that block selection.
+          </p>
+          <div class="ctaRow" id="download">
+            <!-- Put your release asset at this exact name: ClipOCR-win64.zip -->
+            <a
+              class="btn btnPrimary"
+              href="https://github.com/ENODDEDC/ocr-clipboard-capture/releases/latest/download/ClipOCR-win64.zip"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Download (Windows)
+              <span class="kbd">ZIP</span>
+            </a>
+            <a
+              class="btn"
+              href="https://github.com/ENODDEDC/ocr-clipboard-capture"
+              target="_blank"
+              rel="noreferrer"
+            >
+              View source
+              <span class="kbd">GitHub</span>
+            </a>
+            <span class="kbd">Hotkey: Ctrl + Alt + H</span>
+          </div>
+        </div>
+
+        <div class="card" aria-label="Animated demo">
+          <div class="demoTopbar">
+            <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span class="demoTitle">Demo — drag-select text → copied</span>
+          </div>
+          <div class="demoArea" id="demo">
+            <div class="paper" aria-hidden="true">
+              <div class="field">
+                <div class="label">NAME</div>
+                <div class="value">ALEXANDER RIVERA SANTOS</div>
+              </div>
+              <div class="overlay" id="overlay"></div>
+              <div class="selectBox" id="box"></div>
+              <div class="cursor" id="cursor"></div>
+            </div>
+            <div class="toast">
+              <div>
+                <b>ClipOCR</b>
+                <small id="status">Press hotkey…</small>
+              </div>
+              <span class="pill" id="pill"><i></i><span id="pillText">Ready</span></span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="grid" id="requirements">
+        <div class="tile">
+          <h3>Works in the background</h3>
+          <p>Runs as a tray app. No extra windows. Just the overlay during selection.</p>
+        </div>
+        <div class="tile">
+          <h3>Fast workflow</h3>
+          <p>Hotkey → drag → release → copied to clipboard. Paste anywhere.</p>
+        </div>
+        <div class="tile">
+          <h3>Portable release</h3>
+          <p>Use the zip release. You can bundle Tesseract for “zero-install” users.</p>
+        </div>
+      </section>
+
+      <section class="section" id="how">
+        <h2>How it works</h2>
+        <div class="steps">
+          <div class="step">
+            <div><span class="num">1</span><b>Press the hotkey</b></div>
+            <p>Trigger the capture overlay anytime: <span class="kbd">Ctrl + Alt + H</span>.</p>
+          </div>
+          <div class="step">
+            <div><span class="num">2</span><b>Drag to select the text</b></div>
+            <p>Draw a rectangle around the words you want. Tight selections improve accuracy.</p>
+          </div>
+          <div class="step">
+            <div><span class="num">3</span><b>OCR reads what’s on your screen</b></div>
+            <p>ClipOCR preprocesses the image and runs Tesseract OCR automatically.</p>
+          </div>
+          <div class="step">
+            <div><span class="num">4</span><b>Text is copied to clipboard</b></div>
+            <p>Paste into Excel, Notion, Google Docs, chat apps—anywhere.</p>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        <div class="fine">
+          <div>For best results: zoom PDFs to 150–250% before capture.</div>
+          <div>
+            <a href="#top" style="text-decoration: none; color: rgba(233, 238, 247, 0.9)">Back to top</a>
+          </div>
+        </div>
+      </footer>
+    </main>
+
+    <script>
+      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const overlay = document.getElementById("overlay");
+      const box = document.getElementById("box");
+      const cursor = document.getElementById("cursor");
+      const statusEl = document.getElementById("status");
+      const pillText = document.getElementById("pillText");
+
+      function setBox(x, y, w, h) {
+        box.style.left = x + "px";
+        box.style.top = y + "px";
+        box.style.width = w + "px";
+        box.style.height = h + "px";
+      }
+      function setCursor(x, y) {
+        cursor.style.left = x + "px";
+        cursor.style.top = y + "px";
+      }
+
+      function sleep(ms) {
+        return new Promise((r) => setTimeout(r, ms));
+      }
+
+      function getSelectionTargets() {
+        const paper = document.querySelector(".paper");
+        const value = document.querySelector(".value");
+        if (!paper || !value) return null;
+
+        const pr = paper.getBoundingClientRect();
+        const vr = value.getBoundingClientRect();
+
+        const pad = 10;
+        const left = Math.max(pad, vr.left - pr.left - pad);
+        const top = Math.max(pad, vr.top - pr.top - pad);
+        const right = Math.min(pr.width - pad, vr.right - pr.left + pad);
+        const bottom = Math.min(pr.height - pad, vr.bottom - pr.top + pad);
+
+        return { left, top, right, bottom };
+      }
+
+      async function runDemo() {
+        if (prefersReducedMotion) return;
+        while (true) {
+          // Ready
+          overlay.classList.remove("on");
+          box.classList.remove("on");
+          cursor.classList.remove("on");
+          statusEl.textContent = "Press hotkey…";
+          pillText.textContent = "Ready";
+          await sleep(900);
+
+          // Hotkey triggered
+          overlay.classList.add("on");
+          statusEl.textContent = "Hotkey pressed — select text";
+          pillText.textContent = "Selecting";
+          await sleep(650);
+
+          // Cursor appears, drag selection
+          cursor.classList.add("on");
+          const t = getSelectionTargets();
+          const start = t ? { x: t.left, y: t.top } : { x: 86, y: 126 };
+          const end = t ? { x: t.right, y: t.bottom } : { x: 300, y: 190 };
+          setCursor(start.x, start.y);
+          box.classList.add("on");
+          setBox(start.x, start.y, 10, 10);
+          await sleep(160);
+
+          const steps = 28;
+          for (let i = 1; i <= steps; i++) {
+            const t = i / steps;
+            const x = start.x + (end.x - start.x) * t;
+            const y = start.y + (end.y - start.y) * t;
+            setCursor(x, y);
+            setBox(start.x, start.y, Math.max(10, x - start.x), Math.max(10, y - start.y));
+            await sleep(18);
+          }
+
+          // Release -> OCR
+          statusEl.textContent = "OCR running…";
+          pillText.textContent = "OCR";
+          await sleep(850);
+
+          // Copied
+          overlay.classList.remove("on");
+          statusEl.textContent = 'Copied: "ALEXANDER RIVERA SANTOS"';
+          pillText.textContent = "Copied";
+          await sleep(1600);
+        }
+      }
+
+      runDemo();
+    </script>
+  </body>
+</html>
